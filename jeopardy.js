@@ -19,14 +19,38 @@
 //  ]
 
 let categories = [];
-
+const numOfCategories = 6;
 
 /** Get NUM_CATEGORIES random category from API.
  *
  * Returns array of category ids
  */
-
-function getCategoryIds() {
+const url = 'http://jservice.io//api/clues';
+async function getCatNQues() {
+    
+    const response = await axios.get(url);
+    categories = Object.entries(response.data);
+    
+    let allCategoryIds = categories.map( arr => {
+        const categoryArr = arr[1]; 
+        return categoryArr;
+    });
+    
+    // creating an array
+    // spreading array of ids
+    // reducing
+    // params
+    // map = accumulator
+    // obj = current obj iteration
+    // func
+        // set maps key to obj's id and val = current obj
+    // call map values
+    const uniqIds = [...allCategoryIds.reduce((map, obj) => map.set(obj, obj), new Map()).values()];
+    categories = _.sampleSize(uniqIds, numOfCategories);
+    console.log(allCategoryIds)
+    let uniqCategories = [];
+    uniqCategories = _.filter(allCategoryIds,  {'category_id' : categories.category_id});
+    return console.log(uniqCategories);
 }
 
 /** Return object with data about a category:
@@ -43,6 +67,8 @@ function getCategoryIds() {
 
 
 function getCategory(catId) {
+    const randomIdx = Math.floor(Math.random() * catId.length);
+    console.log(catId[randomIdx]);
 }
 
 /** Fill the HTML Card#jeopardy with the categories & cells for questions.
@@ -92,7 +118,11 @@ async function setupAndStart() {
 }
 
 /** On click of start / restart button, set up game. */
+$('#start').on("click", () => {
+    $('header').fadeOut("slow", () => {
 
+    });
+});
 // TODO
 
 /** On page load, add event handler for clicking clues */
