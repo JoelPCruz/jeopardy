@@ -68,6 +68,10 @@ div {
 	margin: 1em;
 }
 
+.answer {
+	color:red;
+}
+
 .card {
 	border: solid 1px black;
 }
