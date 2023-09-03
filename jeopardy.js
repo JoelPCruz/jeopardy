@@ -17,33 +17,51 @@
 //    },
 //    ...
 //  ]
-
+$('#restart').hide();
 let categories = [];
-
-
+const numOfCategories = 6;
+const numOfQuestions = 5;
+const $jeopardyBoard = $("#jeopardy");
+const $questionP = $("#question");
 /** Get NUM_CATEGORIES random category from API.
  *
  * Returns array of category ids
  */
-
-function getCategoryIds() {
+function getCategoryIds(catIds) {
+	// selects random categories from list provided
+	let randomIds = _.sampleSize(catIds.data, numOfCategories);
+	let categoryIds = [];
+	// push each id into an array
+	for (cat of randomIds) {
+		categoryIds.push(cat.id);
+	}
+	return categoryIds;
 }
 
-/** Return object with data about a category:
- *
- *  Returns { title: "Math", clues: clue-array }
- *
- * Where clue-array is:
- *   [
- *      {question: "Hamlet Author", answer: "Shakespeare"},
- *      {question: "Bell Jar Author", answer: "Plath"},
- *      ...
- *   ]
- */
-
-
+// gets data from each id provided
 function getCategory(catId) {
+	let cat = catId.data;
+	// gets the amount of questions needed from the category
+	let clues = _.sampleSize(cat, numOfQuestions);
+	// gets titles from categories
+	let catData = {
+		title: cat[0].category.title,
+		clues: []
+	};
+	// gets questions and answers from categories
+	clues.map((arr) => {
+		let cluesArr = {
+			question: arr.question,
+			answer: arr.answer,
+			showing: null
+		};
+		catData.clues.push(cluesArr);
+	});
+	// pushes data into categories array
+	categories.push(catData);
+    console.log(categories)
 }
+
 
 /** Fill the HTML Card#jeopardy with the categories & cells for questions.
  *
@@ -54,7 +72,28 @@ function getCategory(catId) {
  * 
  */
 
-async function fillCard() {
+async function fillTable() {
+    const titles = categories.map(title => title.title);
+	// loops through each title and makes table headers of each
+	$("thead").add("tr");
+	for (let x = 0; x < numOfCategories; x++) {
+		const catHeader = document.createElement("th");
+		catHeader.innerText = titles[x];
+		$("thead").append(catHeader);
+	}
+	//makes the rest of the table and gives each an id of its location
+	let value = 0;
+    for (let y = 0; y < numOfQuestions; y++) {
+		const row = document.createElement("tr");
+        value += 100;
+		for (let x = 0; x < numOfCategories; x++) {
+			const cell = document.createElement("td");
+			cell.innerHTML = `<div id=${x}-${y}>${value}</div>`;
+			row.append(cell);
+		}
+        // console.log(row)
+		$jeopardyBoard.append(row);
+	}
 }
 
 /** Handle clicking on a clue: show the question or answer.
@@ -65,7 +104,44 @@ async function fillCard() {
  * */
 
 
-function handleClick(evt) {
+// function handleClick(e) {
+// 	let x = e.target.id[0];
+// 	let y = e.target.id[2];
+// 	if (e.target.classList.contains("answer")) {
+// 		e.target.style.height = "";
+// 		e.target.style.width = "";
+// 		return;
+// 		// if question is displayed, display answer instead
+// 	} else if (e.target.classList.contains("question")) {
+		
+// 		e.target.innerText = categories[x].clues[y].answer;
+// 		e.target.classList.remove("question");
+// 		e.target.classList.add("answer");
+// 		// if nothing is displayed yet, display question
+// 	} else {
+// 		e.target.innerText = categories[x].clues[y].question;
+// 		e.target.classList.add("question");
+// 	}
+
+// }
+
+function handleClick(e) {
+	// x and y are used to change the data displayed into the correct questions and answers
+	let x = e.target.id[0];
+	let y = e.target.id[2];
+	// if answer is displayed, do nothing
+	if (e.target.classList.contains("answer")) {
+		return;
+		// if question is displayed, display answer instead
+	} else if (e.target.classList.contains("question")) {
+		e.target.innerText = categories[x].clues[y].answer;
+		e.target.classList.remove("question");
+		e.target.classList.add("answer");
+		// if nothing is displayed yet, display question
+	} else {
+		e.target.innerText = categories[x].clues[y].question;
+		e.target.classList.add("question");
+	}
 }
 
 /** Wipe the current Jeopardy board, show the loading spinner,
@@ -73,12 +149,20 @@ function handleClick(evt) {
  */
 
 function showLoadingView() {
-
+	$(document).on( "ajaxStop", function() {
+		$( ".fa-spinner" ).show();
+	});
+	
 }
 
-/** Remove the loading spinner and update the button used to fetch data. */
+// /** Remove the loading spinner and update the button used to fetch data. */
 
 function hideLoadingView() {
+	$('.fa-spinner').hide();
+	$(document).on( "ajaxStart", function() {
+		$( ".fa-spinner" ).show();
+	});
+	
 }
 
 /** Start game:
@@ -89,7 +173,46 @@ function hideLoadingView() {
  * */
 
 async function setupAndStart() {
+	// get 100 categories from jservice.io
+	$("#start").hide();
+	showLoadingView()
+	const resCategories = await axios.get("http://jservice.io/api/categories", {
+		params: {
+			count: 100
+		}
+	});
+	hideLoadingView()
+	let catIds = getCategoryIds(resCategories);
+
+	for (id of catIds) {
+		// for each id, get clue data from jservoce.io
+		const resTitles = await axios.get("http://jservice.io/api/clues", {
+			params: {
+				category: id
+			}
+		});
+        let res = getCategory(resTitles);
+		console.log(res)
+	}
+	fillTable();
 }
+$("#restart").on("click", function() {
+	location.reload();
+});
+
+// when document is loaded, start game and add event listener for jeopardy board
+$("#start").on("click", function() {
+	setupAndStart();
+	("#restart").show();
+});
+$jeopardyBoard.on("click", handleClick);
+
+
+
+
+//   $( document ).on( "ajaxStop", function() {
+// 	$( ".fa-spinner" ).hide();
+//   } );
 
 /** On click of start / restart button, set up game. */
 
